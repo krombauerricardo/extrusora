@@ -518,7 +518,7 @@
         sliderCorrente.addEventListener('input', (e) => {
           const value = e.target.value;
           document.getElementById('corrente-setpoint').textContent = value + ' Hz';
-          this.sendMQTTCommand('extrusora/motor/corrente/setpoint', value);
+          this.sendMQTTCommand('extrusora/motor/frequencia/setpoint', value);
         });
 
         // Setpoints de temperatura - 5 zonas
