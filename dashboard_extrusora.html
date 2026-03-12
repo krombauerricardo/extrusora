@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dashboard - Extrusora</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0e1a;
+      --surface:   #111827;
+      --border:    rgba(56, 189, 248, 0.15);
+      --accent:    #38bdf8;
+      --accent2:   #22d3ee;
+      --green:     #4ade80;
+      --yellow:    #facc15;
+      --red:       #f87171;
+      --muted:     #64748b;
+      --text:      #e2e8f0;
+      --mono:      'Share Tech Mono', monospace;
+      --sans:      'Barlow Condensed', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      font-family: var(--sans);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding-bottom: 24px;
+    }
+
+    /* ── HEADER ─────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .header-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .header-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-family: var(--mono);
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--mono);
+      border: 1px solid;
+      transition: all 0.3s;
+    }
+
+    .status-pill.online  { background: rgba(74,222,128,0.1); color: var(--green); border-color: rgba(74,222,128,0.3); }
+    .status-pill.offline { background: rgba(248,113,113,0.1); color: var(--red);   border-color: rgba(248,113,113,0.3); }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-pill.online .status-dot { animation: blink 1.8s ease-in-out infinite; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .clock {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ── CONTENT ─────────────────────────────────── */
+    .content {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── SECTION LABEL ─────────────────────────── */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--mono);
+      padding-left: 2px;
+      margin-bottom: -6px;
+    }
+
+    /* ── CARD BASE ─────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 10px 10px 0 0;
+      opacity: 0.7;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+
+    /* ── PRODUÇÃO HERO ─────────────────────────── */
+    .card-producao {
+      background: linear-gradient(135deg, #0f1f3d 0%, #0a1628 100%);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .card-producao::before {
+      opacity: 1;
+      height: 3px;
+    }
+
+    .producao-row {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      gap: 0;
+      align-items: center;
+    }
+
+    .producao-bloco {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 4px;
+    }
+
+    .producao-divider {
+      background: var(--border);
+      width: 1px;
+      height: 60px;
+      margin: 0 auto;
+    }
+
+    .prod-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .prod-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      font-family: var(--mono);
+      color: var(--accent);
+      line-height: 1;
+      text-shadow: 0 0 20px rgba(56,189,248,0.4);
+    }
+
+    .prod-value.media {
+      color: var(--green);
+      text-shadow: 0 0 20px rgba(74,222,128,0.4);
+    }
+
+    .prod-unit {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      letter-spacing: 0.1em;
+    }
+
+    .prod-update {
+      font-size: 0.62rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-align: center;
+    }
+
+    /* ── GRID 2 COLUNAS ────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* ── METRIC BOX ────────────────────────────── */
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .metric-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .metric-unit {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── STATUS BADGE ──────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      letter-spacing: 0.1em;
+    }
+
+    .badge-green  { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .badge-gray   { background: rgba(100,116,139,0.15); color: var(--muted); border: 1px solid rgba(100,116,139,0.3); }
+
+    /* ── TEMP GRID ─────────────────────────────── */
+    .temp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .temp-cell {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .temp-cell-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-family: var(--mono);
+    }
+
+    .temp-cell-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--yellow);
+      line-height: 1;
+    }
+
+    .temp-cell-unit {
+      font-size: 0.6rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── TÓPICOS TABLE ─────────────────────────── */
+    .topics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .topic-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      gap: 8px;
+    }
+
+    .topic-name {
+      font-size: 0.65rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topic-val {
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── LINK PARA CONTROLE ─────────────────────── */
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      border: 1px solid rgba(56,189,248,0.3);
+      border-radius: 10px;
+      padding: 14px;
+      text-decoration: none;
+      color: white;
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 360px) {
+      .prod-value { font-size: 2rem; }
+      .metric-value { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <div class="header-title">⚙ Extrusora</div>
+        <div class="header-sub">Dashboard · Tempo Real</div>
+      </div>
+      <div class="header-right">
+        <div class="status-pill offline" id="status-badge">
+          <span class="status-dot"></span>
+          <span id="status-texto">OFFLINE</span>
+        </div>
+        <div class="clock" id="relogio">--:--:--</div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- PRODUÇÃO -->
+      <div class="section-label">Produção</div>
+      <div class="card card-producao">
+        <div class="card-title">Contadores de Produção</div>
+        <div class="producao-row">
+          <div class="producao-bloco">
+            <div class="prod-label">📦 Itens Fabricados</div>
+            <div class="prod-value" id="db-itens">0</div>
+            <div class="prod-unit">unidades</div>
+          </div>
+          <div class="producao-divider"></div>
+          <div class="producao-bloco">
+            <div class="prod-label">📊 Média / Hora</div>
+            <div class="prod-value media" id="db-media">0</div>
+            <div class="prod-unit">un/h</div>
+          </div>
+        </div>
+        <div class="prod-update" id="db-update">Aguardando dados...</div>
+      </div>
+
+      <!-- MOTOR -->
+      <div class="section-label">Motor da Extrusora</div>
+      <div class="card">
+        <div class="card-title">Acionamento</div>
+        <div class="grid-2">
+          <div class="metric">
+            <div class="metric-label">Frequência</div>
+            <div class="metric-value" id="db-motor-freq">--.-</div>
+            <div class="metric-unit">Hz</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Corrente</div>
+            <div class="metric-value" id="db-motor-corrente">--.-</div>
+            <div class="metric-unit">A</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEMPERATURAS -->
+      <div class="section-label">Temperaturas</div>
+      <div class="card">
+        <div class="card-title">Zonas de Aquecimento</div>
+        <div class="temp-grid">
+          <div class="temp-cell">
+            <div class="temp-cell-label">Zona 1</div>
+            <div class="temp-cell-value" id="db-temp-1">--</div>
+            <div class="temp-cell-unit">°C</div>
+          </div>
+          <div class="temp-cell">
+            <div class="temp-cell-label">Zona 2</div>
+            <div class="temp-cell-value" id="db-temp-2">--</div>
+            <div class="temp-cell-unit">°C</div>
+          </div>
+          <div class="temp-cell">
+            <div class="temp-cell-label">Zona 3</div>
+            <div class="temp-cell-value" id="db-temp-3">--</div>
+            <div class="temp-cell-unit">°C</div>
+          </div>
+          <div class="temp-cell">
+            <div class="temp-cell-label">Zona 4</div>
+            <div class="temp-cell-value" id="db-temp-4">--</div>
+            <div class="temp-cell-unit">°C</div>
+          </div>
+          <div class="temp-cell">
+            <div class="temp-cell-label">Zona 5</div>
+            <div class="temp-cell-value" id="db-temp-5">--</div>
+            <div class="temp-cell-unit">°C</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOSADOR -->
+      <div class="section-label">Dosador de Material</div>
+      <div class="card">
+        <div class="card-title">Status do Dosador</div>
+        <div class="grid-2">
+          <div class="metric">
+            <div class="metric-label">Frequência</div>
+            <div class="metric-value" id="db-dosador-freq">--.-</div>
+            <div class="metric-unit">Hz</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Status</div>
+            <div style="margin-top: 6px;">
+              <span class="badge badge-gray" id="db-dosador-status">INATIVO</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TÓPICOS MQTT -->
+      <div class="section-label">Tópicos MQTT</div>
+      <div class="card">
+        <div class="card-title">Monitor de Tópicos</div>
+        <div class="topics-list" id="topics-list">
+          <!-- preenchido dinamicamente -->
+        </div>
+      </div>
+
+      <!-- LINK PARA CONTROLE -->
+      <a href="mobile_extrusora.html" class="nav-btn">
+        ⚙ Abrir Tela de Controle
+      </a>
+
+    </div>
+  </div>
+
+  <script>
+    // ── Relógio ──────────────────────────────────────────
+    setInterval(() => {
+      document.getElementById('relogio').textContent =
+        new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    // ── Monitor de tópicos ───────────────────────────────
+    const topicsMap = {};
+    const TOPICS_ORDER = [
+      "extrusora/producao/itens",
+      "extrusora/producao/media",
+      "extrusora/motor/frequencia",
+      "extrusora/motor/corrente",
+      "extrusora/temperatura/zona1/atual",
+      "extrusora/temperatura/zona2/atual",
+      "extrusora/temperatura/zona3/atual",
+      "extrusora/temperatura/zona4/atual",
+      "extrusora/temperatura/zona5/atual",
+      "extrusora/dosador/frequencia",
+      "extrusora/dosador/status",
+    ];
+
+    function renderTopics() {
+      const list = document.getElementById('topics-list');
+      list.innerHTML = '';
+      TOPICS_ORDER.forEach(t => {
+        const val = topicsMap[t] !== undefined ? topicsMap[t] : '--';
+        const row = document.createElement('div');
+        row.className = 'topic-row';
+        row.innerHTML = `<span class="topic-name">${t}</span><span class="topic-val">${val}</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    renderTopics();
+
+    // ── MQTT ─────────────────────────────────────────────
+    class DashboardController {
+      constructor() {
+        this.mqttClient = null;
+        this.isConnected = false;
+        this.connectMQTT();
+      }
+
+      connectMQTT() {
+        try {
+          const brokerUrl = "wss://broker.emqx.io:8084/mqtt";
+          console.log("[MQTT] Conectando dashboard em:", brokerUrl);
+
+          this.mqttClient = mqtt.connect(brokerUrl, {
+            clientId: "dashboard_extrusora_" + Math.random().toString(16).substr(2, 8),
+            reconnectPeriod: 3000,
+            connectTimeout: 30000,
+            clean: true,
+            keepalive: 60
+          });
+
+          this.mqttClient.on("connect", () => {
+            console.log("[MQTT] Dashboard conectado!");
+            this.isConnected = true;
+            this.updateStatus(true);
+
+            // Subscrever a todos os tópicos
+            TOPICS_ORDER.forEach(t => {
+              this.mqttClient.subscribe(t, { qos: 1 });
+            });
+          });
+
+          this.mqttClient.on("message", (topic, message) => {
+            const msg = message.toString();
+            topicsMap[topic] = msg;
+            renderTopics();
+            this.handleMessage(topic, msg);
+          });
+
+          this.mqttClient.on("error",   (err) => { console.error("[MQTT]", err); this.updateStatus(false); });
+          this.mqttClient.on("offline",  ()    => { this.updateStatus(false); });
+          this.mqttClient.on("close",    ()    => { this.updateStatus(false); });
+          this.mqttClient.on("reconnect",()    => { console.log("[MQTT] Reconectando..."); });
+
+        } catch (e) {
+          console.error("[MQTT] Exceção:", e);
+          this.updateStatus(false);
+        }
+      }
+
+      handleMessage(topic, message) {
+        const val = parseFloat(message);
+
+        if (topic === "extrusora/producao/itens") {
+          const n = parseInt(message) || 0;
+          document.getElementById("db-itens").textContent = n.toLocaleString('pt-BR');
+          document.getElementById("db-update").textContent =
+            "Última atualização: " + new Date().toLocaleTimeString('pt-BR');
+
+        } else if (topic === "extrusora/producao/media") {
+          document.getElementById("db-media").textContent =
+            isNaN(val) ? message : val.toLocaleString('pt-BR');
+
+        } else if (topic === "extrusora/motor/frequencia") {
+          document.getElementById("db-motor-freq").textContent = val.toFixed(1);
+
+        } else if (topic === "extrusora/motor/corrente") {
+          document.getElementById("db-motor-corrente").textContent = val.toFixed(1);
+
+        } else if (topic.startsWith("extrusora/temperatura/zona") && topic.endsWith("/atual")) {
+          const zona = topic.split("/")[2].replace("zona", "");
+          const el = document.getElementById(`db-temp-${zona}`);
+          if (el) el.textContent = Math.round(val);
+
+        } else if (topic === "extrusora/dosador/frequencia") {
+          document.getElementById("db-dosador-freq").textContent = val.toFixed(1);
+
+        } else if (topic === "extrusora/dosador/status") {
+          const ativo = message === "true";
+          const el = document.getElementById("db-dosador-status");
+          el.textContent = ativo ? "ATIVO" : "INATIVO";
+          el.className = "badge " + (ativo ? "badge-green" : "badge-gray");
+        }
+      }
+
+      updateStatus(connected) {
+        const badge = document.getElementById("status-badge");
+        const texto = document.getElementById("status-texto");
+        this.isConnected = connected;
+        if (connected) {
+          badge.className = "status-pill online";
+          texto.textContent = "ONLINE";
+        } else {
+          badge.className = "status-pill offline";
+          texto.textContent = "OFFLINE";
+        }
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      new DashboardController();
+    });
+  </script>
+</body>
+</html>
