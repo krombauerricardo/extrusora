@@ -441,9 +441,9 @@
         <div class="slider-container">
           <div class="slider-label">
             <span>Ajuste de Corrente</span>
-            <span class="slider-value" id="corrente-setpoint">0.0 A</span>
+            <span class="slider-value" id="corrente-setpoint">0.0 Hz</span>
           </div>
-          <input type="range" id="slider-corrente" min="0" max="12" step="0.1" value="0" />
+          <input type="range" id="slider-corrente" min="20" max="60" step="0.1" value="0" />
         </div>
       </div>
 
@@ -578,7 +578,7 @@
         const sliderCorrente = document.getElementById('slider-corrente');
         sliderCorrente.addEventListener('input', (e) => {
           const value = e.target.value;
-          document.getElementById('corrente-setpoint').textContent = value + ' A';
+          document.getElementById('corrente-setpoint').textContent = value + ' Hz';
           this.sendMQTTCommand('extrusora/motor/corrente/setpoint', value);
         });
 
