@@ -5,398 +5,276 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dashboard - Extrusora</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg:        #0a0e1a;
-      --surface:   #111827;
-      --border:    rgba(56, 189, 248, 0.15);
-      --accent:    #38bdf8;
-      --accent2:   #22d3ee;
-      --green:     #4ade80;
-      --yellow:    #facc15;
-      --red:       #f87171;
-      --muted:     #64748b;
-      --text:      #e2e8f0;
-      --mono:      'Share Tech Mono', monospace;
-      --sans:      'Barlow Condensed', sans-serif;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     html, body {
-      width: 100%; height: 100%;
-      background: var(--bg);
-      font-family: var(--sans);
-      color: var(--text);
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #333;
       overflow-x: hidden;
-    }
-
-    /* scanline overlay */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-      pointer-events: none;
-      z-index: 9999;
+      position: fixed;
     }
 
     .container {
+      width: 100%;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-      padding-bottom: 24px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 20px;
     }
 
-    /* ── HEADER ─────────────────────────────────── */
+    /* Header */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      background: white;
+      padding: 16px 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      color: #222;
+      margin: 0;
+      flex: 1;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-conectado    { background-color: #d4edda; color: #155724; }
+    .status-desconectado { background-color: #f8d7da; color: #721c24; }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    .status-desconectado .status-dot { animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    /* Banner de Produção */
+    .producao-banner {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
       padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      flex-shrink: 0;
-      position: sticky; top: 0; z-index: 100;
-    }
-
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .header-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      line-height: 1;
-    }
-
-    .header-sub {
-      font-size: 0.72rem;
-      color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      font-family: var(--mono);
-    }
-
-    .header-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-    }
-
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      font-family: var(--mono);
-      border: 1px solid;
-      transition: all 0.3s;
-    }
-
-    .status-pill.online  { background: rgba(74,222,128,0.1); color: var(--green); border-color: rgba(74,222,128,0.3); }
-    .status-pill.offline { background: rgba(248,113,113,0.1); color: var(--red);   border-color: rgba(248,113,113,0.3); }
-
-    .status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .status-pill.online .status-dot { animation: blink 1.8s ease-in-out infinite; }
-
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-    .clock {
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--muted);
-    }
-
-    /* ── CONTENT ─────────────────────────────────── */
-    .content {
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    /* ── SECTION LABEL ─────────────────────────── */
-    .section-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
-      padding-left: 2px;
-      margin-bottom: -6px;
-    }
-
-    /* ── CARD BASE ─────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
       gap: 12px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 10px 10px 0 0;
-      opacity: 0.7;
-    }
-
-    .card-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-family: var(--mono);
-    }
-
-    /* ── PRODUÇÃO HERO ─────────────────────────── */
-    .card-producao {
-      background: linear-gradient(135deg, #0f1f3d 0%, #0a1628 100%);
-      border-color: rgba(56, 189, 248, 0.3);
-    }
-
-    .card-producao::before {
-      opacity: 1;
-      height: 3px;
-    }
-
-    .producao-row {
-      display: grid;
-      grid-template-columns: 1fr 1px 1fr;
-      gap: 0;
-      align-items: center;
+      flex-shrink: 0;
+      border-bottom: 3px solid rgba(255,255,255,0.15);
     }
 
     .producao-bloco {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 8px 4px;
     }
 
     .producao-divider {
-      background: var(--border);
       width: 1px;
-      height: 60px;
-      margin: 0 auto;
+      height: 40px;
+      background: rgba(255,255,255,0.2);
     }
 
-    .prod-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
+    .producao-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
       text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
+      letter-spacing: 0.06em;
     }
 
-    .prod-value {
-      font-size: 2.6rem;
-      font-weight: 800;
-      font-family: var(--mono);
-      color: var(--accent);
+    .producao-valor {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
       line-height: 1;
-      text-shadow: 0 0 20px rgba(56,189,248,0.4);
     }
 
-    .prod-value.media {
-      color: var(--green);
-      text-shadow: 0 0 20px rgba(74,222,128,0.4);
+    .producao-unidade {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
     }
 
-    .prod-unit {
-      font-size: 0.7rem;
-      color: var(--muted);
-      font-family: var(--mono);
-      letter-spacing: 0.1em;
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    .prod-update {
-      font-size: 0.62rem;
-      color: var(--muted);
-      font-family: var(--mono);
+    /* Card Base */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #222;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background-color: #2a5298;
+      border-radius: 2px;
+    }
+
+    /* Info boxes */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .info-box {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 12px;
+      border-radius: 8px;
       text-align: center;
     }
 
-    /* ── GRID 2 COLUNAS ────────────────────────── */
-    .grid-2 {
+    .info-label {
+      font-size: 0.8rem;
+      color: #666;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2a5298;
+      font-family: 'Courier New', monospace;
+    }
+
+    .info-unit {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    /* Status dosador */
+    .status-ativo   { color: #28a745 !important; }
+    .status-inativo { color: #999    !important; }
+
+    /* Zona temp label */
+    .zona-temp-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #2a5298;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e0e7f0;
+      padding-bottom: 4px;
+      margin-top: 4px;
+    }
+
+    /* Temp zona row */
+    .temp-zona-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
 
-    /* ── METRIC BOX ────────────────────────────── */
-    .metric {
+    .temp-box {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 12px;
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
 
-    .metric-label {
-      font-size: 0.62rem;
+    .temp-label {
+      font-size: 0.8rem;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .temp-display {
+      font-size: 1.8rem;
       font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
+      color: #2a5298;
+      font-family: 'Courier New', monospace;
     }
 
-    .metric-value {
-      font-size: 1.9rem;
-      font-weight: 700;
-      font-family: var(--mono);
-      color: var(--text);
-      line-height: 1;
-    }
-
-    .metric-unit {
-      font-size: 0.65rem;
-      color: var(--muted);
-      font-family: var(--mono);
-    }
-
-    /* ── STATUS BADGE ──────────────────────────── */
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      font-family: var(--mono);
-      letter-spacing: 0.1em;
-    }
-
-    .badge-green  { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
-    .badge-gray   { background: rgba(100,116,139,0.15); color: var(--muted); border: 1px solid rgba(100,116,139,0.3); }
-
-    /* ── TEMP GRID ─────────────────────────────── */
-    .temp-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-
-    .temp-cell {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 10px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .temp-cell-label {
-      font-size: 0.6rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-family: var(--mono);
-    }
-
-    .temp-cell-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      font-family: var(--mono);
-      color: var(--yellow);
-      line-height: 1;
-    }
-
-    .temp-cell-unit {
-      font-size: 0.6rem;
-      color: var(--muted);
-      font-family: var(--mono);
-    }
-
-    /* ── TÓPICOS TABLE ─────────────────────────── */
-    .topics-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .topic-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 8px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      gap: 8px;
-    }
-
-    .topic-name {
-      font-size: 0.65rem;
-      font-family: var(--mono);
-      color: var(--muted);
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .topic-val {
+    .temp-unit {
       font-size: 0.75rem;
-      font-family: var(--mono);
-      font-weight: 700;
-      color: var(--accent);
-      white-space: nowrap;
+      color: #999;
+      text-align: center;
     }
 
-    /* ── LINK PARA CONTROLE ─────────────────────── */
+    /* Botão de navegação */
     .nav-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      border: 1px solid rgba(56,189,248,0.3);
-      border-radius: 10px;
-      padding: 14px;
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px;
       text-decoration: none;
-      color: white;
-      font-family: var(--sans);
-      font-size: 0.95rem;
+      color: #2a5298;
+      font-size: 1rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
-    @media (max-width: 360px) {
-      .prod-value { font-size: 2rem; }
-      .metric-value { font-size: 1.6rem; }
+    /* Responsividade */
+    @media (max-width: 480px) {
+      header h1     { font-size: 1.1rem; }
+      .card         { padding: 12px; gap: 10px; }
+      .card-title   { font-size: 1rem; }
+      .info-value   { font-size: 1.4rem; }
+      .temp-display { font-size: 1.6rem; }
     }
   </style>
 </head>
@@ -405,166 +283,153 @@
 
     <!-- Header -->
     <header>
-      <div class="header-left">
-        <div class="header-title">⚙ Extrusora</div>
-        <div class="header-sub">Dashboard · Tempo Real</div>
-      </div>
-      <div class="header-right">
-        <div class="status-pill offline" id="status-badge">
-          <span class="status-dot"></span>
-          <span id="status-texto">OFFLINE</span>
-        </div>
-        <div class="clock" id="relogio">--:--:--</div>
+      <h1>📊 Dashboard Extrusora</h1>
+      <div class="status-badge status-desconectado" id="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-texto">DESCONECTADO</span>
       </div>
     </header>
 
+    <!-- Banner Produção -->
+    <div class="producao-banner">
+      <div class="producao-bloco">
+        <div class="producao-label">📦 Itens Fabricados</div>
+        <div class="producao-valor" id="db-itens">0</div>
+        <div class="producao-unidade">unidades</div>
+      </div>
+      <div class="producao-divider"></div>
+      <div class="producao-bloco">
+        <div class="producao-label">📊 Média / Hora</div>
+        <div class="producao-valor" id="db-media">0</div>
+        <div class="producao-unidade">un/h</div>
+      </div>
+      <div class="producao-divider"></div>
+      <div class="producao-bloco">
+        <div class="producao-label">🕐 Atualizado</div>
+        <div class="producao-valor" style="font-size: 1rem; padding-top: 6px;" id="db-update">--:--:--</div>
+        <div class="producao-unidade">horário</div>
+      </div>
+    </div>
+
     <div class="content">
 
-      <!-- PRODUÇÃO -->
-      <div class="section-label">Produção</div>
-      <div class="card card-producao">
-        <div class="card-title">Contadores de Produção</div>
-        <div class="producao-row">
-          <div class="producao-bloco">
-            <div class="prod-label">📦 Itens Fabricados</div>
-            <div class="prod-value" id="db-itens">0</div>
-            <div class="prod-unit">unidades</div>
-          </div>
-          <div class="producao-divider"></div>
-          <div class="producao-bloco">
-            <div class="prod-label">📊 Média / Hora</div>
-            <div class="prod-value media" id="db-media">0</div>
-            <div class="prod-unit">un/h</div>
-          </div>
-        </div>
-        <div class="prod-update" id="db-update">Aguardando dados...</div>
-      </div>
-
-      <!-- MOTOR -->
-      <div class="section-label">Motor da Extrusora</div>
+      <!-- Motor -->
       <div class="card">
-        <div class="card-title">Acionamento</div>
-        <div class="grid-2">
-          <div class="metric">
-            <div class="metric-label">Frequência</div>
-            <div class="metric-value" id="db-motor-freq">--.-</div>
-            <div class="metric-unit">Hz</div>
+        <h2 class="card-title">Motor da Extrusora</h2>
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-label">Frequência</div>
+            <div class="info-value" id="db-motor-freq">--.-</div>
+            <div class="info-unit">Hz</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">Corrente</div>
-            <div class="metric-value" id="db-motor-corrente">--.-</div>
-            <div class="metric-unit">A</div>
+          <div class="info-box">
+            <div class="info-label">Corrente</div>
+            <div class="info-value" id="db-motor-corrente">--.-</div>
+            <div class="info-unit">A</div>
           </div>
         </div>
       </div>
 
-      <!-- TEMPERATURAS -->
-      <div class="section-label">Temperaturas</div>
+      <!-- Temperaturas -->
       <div class="card">
-        <div class="card-title">Zonas de Aquecimento</div>
-        <div class="temp-grid">
-          <div class="temp-cell">
-            <div class="temp-cell-label">Zona 1</div>
-            <div class="temp-cell-value" id="db-temp-1">--</div>
-            <div class="temp-cell-unit">°C</div>
+        <h2 class="card-title">Temperatura</h2>
+
+        <div class="zona-temp-label">Zona 1</div>
+        <div class="temp-zona-row">
+          <div class="temp-box">
+            <div class="temp-label">Temp. Atual</div>
+            <div class="temp-display" id="db-temp-1">--</div>
+            <div class="temp-unit">°C</div>
           </div>
-          <div class="temp-cell">
-            <div class="temp-cell-label">Zona 2</div>
-            <div class="temp-cell-value" id="db-temp-2">--</div>
-            <div class="temp-cell-unit">°C</div>
+          <div class="temp-box">
+            <div class="temp-label">Setpoint</div>
+            <div class="temp-display" id="db-sp-1">--</div>
+            <div class="temp-unit">°C</div>
           </div>
-          <div class="temp-cell">
-            <div class="temp-cell-label">Zona 3</div>
-            <div class="temp-cell-value" id="db-temp-3">--</div>
-            <div class="temp-cell-unit">°C</div>
+        </div>
+
+        <div class="zona-temp-label">Zona 2</div>
+        <div class="temp-zona-row">
+          <div class="temp-box">
+            <div class="temp-label">Temp. Atual</div>
+            <div class="temp-display" id="db-temp-2">--</div>
+            <div class="temp-unit">°C</div>
           </div>
-          <div class="temp-cell">
-            <div class="temp-cell-label">Zona 4</div>
-            <div class="temp-cell-value" id="db-temp-4">--</div>
-            <div class="temp-cell-unit">°C</div>
+          <div class="temp-box">
+            <div class="temp-label">Setpoint</div>
+            <div class="temp-display" id="db-sp-2">--</div>
+            <div class="temp-unit">°C</div>
           </div>
-          <div class="temp-cell">
-            <div class="temp-cell-label">Zona 5</div>
-            <div class="temp-cell-value" id="db-temp-5">--</div>
-            <div class="temp-cell-unit">°C</div>
+        </div>
+
+        <div class="zona-temp-label">Zona 3</div>
+        <div class="temp-zona-row">
+          <div class="temp-box">
+            <div class="temp-label">Temp. Atual</div>
+            <div class="temp-display" id="db-temp-3">--</div>
+            <div class="temp-unit">°C</div>
+          </div>
+          <div class="temp-box">
+            <div class="temp-label">Setpoint</div>
+            <div class="temp-display" id="db-sp-3">--</div>
+            <div class="temp-unit">°C</div>
+          </div>
+        </div>
+
+        <div class="zona-temp-label">Zona 4</div>
+        <div class="temp-zona-row">
+          <div class="temp-box">
+            <div class="temp-label">Temp. Atual</div>
+            <div class="temp-display" id="db-temp-4">--</div>
+            <div class="temp-unit">°C</div>
+          </div>
+          <div class="temp-box">
+            <div class="temp-label">Setpoint</div>
+            <div class="temp-display" id="db-sp-4">--</div>
+            <div class="temp-unit">°C</div>
+          </div>
+        </div>
+
+        <div class="zona-temp-label">Zona 5</div>
+        <div class="temp-zona-row">
+          <div class="temp-box">
+            <div class="temp-label">Temp. Atual</div>
+            <div class="temp-display" id="db-temp-5">--</div>
+            <div class="temp-unit">°C</div>
+          </div>
+          <div class="temp-box">
+            <div class="temp-label">Setpoint</div>
+            <div class="temp-display" id="db-sp-5">--</div>
+            <div class="temp-unit">°C</div>
           </div>
         </div>
       </div>
 
-      <!-- DOSADOR -->
-      <div class="section-label">Dosador de Material</div>
+      <!-- Dosador -->
       <div class="card">
-        <div class="card-title">Status do Dosador</div>
-        <div class="grid-2">
-          <div class="metric">
-            <div class="metric-label">Frequência</div>
-            <div class="metric-value" id="db-dosador-freq">--.-</div>
-            <div class="metric-unit">Hz</div>
+        <h2 class="card-title">Dosador de Material</h2>
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-label">Frequência</div>
+            <div class="info-value" id="db-dosador-freq">--.-</div>
+            <div class="info-unit">Hz</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">Status</div>
-            <div style="margin-top: 6px;">
-              <span class="badge badge-gray" id="db-dosador-status">INATIVO</span>
-            </div>
+          <div class="info-box">
+            <div class="info-label">Status</div>
+            <div class="info-value status-inativo" id="db-dosador-status" style="font-size: 1rem;">INATIVO</div>
           </div>
         </div>
       </div>
 
-      <!-- TÓPICOS MQTT -->
-      <div class="section-label">Tópicos MQTT</div>
-      <div class="card">
-        <div class="card-title">Monitor de Tópicos</div>
-        <div class="topics-list" id="topics-list">
-          <!-- preenchido dinamicamente -->
-        </div>
-      </div>
-
-      <!-- LINK PARA CONTROLE -->
+      <!-- Navegação -->
       <a href="mobile_extrusora.html" class="nav-btn">
-        ⚙ Abrir Tela de Controle
+        ⚙️ Abrir Tela de Controle
       </a>
 
     </div>
   </div>
 
   <script>
-    // ── Relógio ──────────────────────────────────────────
-    setInterval(() => {
-      document.getElementById('relogio').textContent =
-        new Date().toLocaleTimeString('pt-BR');
-    }, 1000);
-
-    // ── Monitor de tópicos ───────────────────────────────
-    const topicsMap = {};
-    const TOPICS_ORDER = [
-      "extrusora/producao/itens",
-      "extrusora/producao/media",
-      "extrusora/motor/frequencia",
-      "extrusora/motor/corrente",
-      "extrusora/temperatura/zona1/atual",
-      "extrusora/temperatura/zona2/atual",
-      "extrusora/temperatura/zona3/atual",
-      "extrusora/temperatura/zona4/atual",
-      "extrusora/temperatura/zona5/atual",
-      "extrusora/dosador/frequencia",
-      "extrusora/dosador/status",
-    ];
-
-    function renderTopics() {
-      const list = document.getElementById('topics-list');
-      list.innerHTML = '';
-      TOPICS_ORDER.forEach(t => {
-        const val = topicsMap[t] !== undefined ? topicsMap[t] : '--';
-        const row = document.createElement('div');
-        row.className = 'topic-row';
-        row.innerHTML = `<span class="topic-name">${t}</span><span class="topic-val">${val}</span>`;
-        list.appendChild(row);
-      });
-    }
-
-    renderTopics();
-
-    // ── MQTT ─────────────────────────────────────────────
     class DashboardController {
       constructor() {
         this.mqttClient = null;
@@ -575,7 +440,7 @@
       connectMQTT() {
         try {
           const brokerUrl = "wss://broker.emqx.io:8084/mqtt";
-          console.log("[MQTT] Conectando dashboard em:", brokerUrl);
+          console.log("[MQTT] Dashboard conectando:", brokerUrl);
 
           this.mqttClient = mqtt.connect(brokerUrl, {
             clientId: "dashboard_extrusora_" + Math.random().toString(16).substr(2, 8),
@@ -590,20 +455,24 @@
             this.isConnected = true;
             this.updateStatus(true);
 
-            // Subscrever a todos os tópicos
-            TOPICS_ORDER.forEach(t => {
-              this.mqttClient.subscribe(t, { qos: 1 });
-            });
+            this.mqttClient.subscribe("extrusora/producao/itens",  { qos: 1 });
+            this.mqttClient.subscribe("extrusora/producao/media",  { qos: 1 });
+            this.mqttClient.subscribe("extrusora/motor/frequencia", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/motor/corrente",   { qos: 1 });
+            for (let z = 1; z <= 5; z++) {
+              this.mqttClient.subscribe(`extrusora/temperatura/zona${z}/atual`,    { qos: 1 });
+              this.mqttClient.subscribe(`extrusora/temperatura/zona${z}/setpoint`, { qos: 1 });
+            }
+            this.mqttClient.subscribe("extrusora/dosador/frequencia", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/dosador/status",     { qos: 1 });
           });
 
           this.mqttClient.on("message", (topic, message) => {
-            const msg = message.toString();
-            topicsMap[topic] = msg;
-            renderTopics();
-            this.handleMessage(topic, msg);
+            console.log("[MQTT]", topic, message.toString());
+            this.handleMessage(topic, message.toString());
           });
 
-          this.mqttClient.on("error",   (err) => { console.error("[MQTT]", err); this.updateStatus(false); });
+          this.mqttClient.on("error",    (err) => { console.error("[MQTT]", err); this.updateStatus(false); });
           this.mqttClient.on("offline",  ()    => { this.updateStatus(false); });
           this.mqttClient.on("close",    ()    => { this.updateStatus(false); });
           this.mqttClient.on("reconnect",()    => { console.log("[MQTT] Reconectando..."); });
@@ -618,14 +487,11 @@
         const val = parseFloat(message);
 
         if (topic === "extrusora/producao/itens") {
-          const n = parseInt(message) || 0;
-          document.getElementById("db-itens").textContent = n.toLocaleString('pt-BR');
-          document.getElementById("db-update").textContent =
-            "Última atualização: " + new Date().toLocaleTimeString('pt-BR');
+          document.getElementById("db-itens").textContent = (parseInt(message) || 0).toLocaleString('pt-BR');
+          document.getElementById("db-update").textContent = new Date().toLocaleTimeString('pt-BR');
 
         } else if (topic === "extrusora/producao/media") {
-          document.getElementById("db-media").textContent =
-            isNaN(val) ? message : val.toLocaleString('pt-BR');
+          document.getElementById("db-media").textContent = isNaN(val) ? message : val.toLocaleString('pt-BR');
 
         } else if (topic === "extrusora/motor/frequencia") {
           document.getElementById("db-motor-freq").textContent = val.toFixed(1);
@@ -634,8 +500,13 @@
           document.getElementById("db-motor-corrente").textContent = val.toFixed(1);
 
         } else if (topic.startsWith("extrusora/temperatura/zona") && topic.endsWith("/atual")) {
-          const zona = topic.split("/")[2].replace("zona", "");
-          const el = document.getElementById(`db-temp-${zona}`);
+          const z = topic.split("/")[2].replace("zona", "");
+          const el = document.getElementById(`db-temp-${z}`);
+          if (el) el.textContent = Math.round(val);
+
+        } else if (topic.startsWith("extrusora/temperatura/zona") && topic.endsWith("/setpoint")) {
+          const z = topic.split("/")[2].replace("zona", "");
+          const el = document.getElementById(`db-sp-${z}`);
           if (el) el.textContent = Math.round(val);
 
         } else if (topic === "extrusora/dosador/frequencia") {
@@ -645,7 +516,7 @@
           const ativo = message === "true";
           const el = document.getElementById("db-dosador-status");
           el.textContent = ativo ? "ATIVO" : "INATIVO";
-          el.className = "badge " + (ativo ? "badge-green" : "badge-gray");
+          el.className = "info-value " + (ativo ? "status-ativo" : "status-inativo");
         }
       }
 
@@ -654,11 +525,11 @@
         const texto = document.getElementById("status-texto");
         this.isConnected = connected;
         if (connected) {
-          badge.className = "status-pill online";
-          texto.textContent = "ONLINE";
+          badge.className = "status-badge status-conectado";
+          texto.textContent = "CONECTADO";
         } else {
-          badge.className = "status-pill offline";
-          texto.textContent = "OFFLINE";
+          badge.className = "status-badge status-desconectado";
+          texto.textContent = "DESCONECTADO";
         }
       }
     }
