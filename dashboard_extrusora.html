@@ -16,37 +16,36 @@
     html, body {
       width: 100%;
       height: 100%;
+      overflow: hidden;
       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       color: #333;
-      overflow-x: hidden;
-      position: fixed;
+      font-size: clamp(12px, 1.5vw, 22px); /* base escalável */
     }
 
-    .container {
-      width: 100%;
+    /* ── LAYOUT PRINCIPAL ── */
+    .page {
+      width: 100vw;
       height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 20px;
+      overflow: hidden;
     }
 
-    /* Header */
+    /* ── HEADER ── */
     header {
       background: white;
-      padding: 16px 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding: clamp(6px, 1vh, 14px) clamp(10px, 1.5vw, 20px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-shrink: 0;
     }
 
     header h1 {
-      font-size: 1.3rem;
+      font-size: clamp(0.9rem, 2vw, 2rem);
       color: #222;
       margin: 0;
       flex: 1;
@@ -55,10 +54,10 @@
     .status-badge {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: 5px;
+      padding: clamp(4px, 0.6vh, 10px) clamp(8px, 1vw, 16px);
       border-radius: 20px;
-      font-size: 0.85rem;
+      font-size: clamp(0.65rem, 1.2vw, 1.1rem);
       font-weight: 600;
       white-space: nowrap;
     }
@@ -67,223 +66,229 @@
     .status-desconectado { background-color: #f8d7da; color: #721c24; }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: clamp(6px, 0.8vw, 12px);
+      height: clamp(6px, 0.8vw, 12px);
       border-radius: 50%;
       background-color: currentColor;
       animation: pulse 2s infinite;
     }
-
     .status-desconectado .status-dot { animation: none; }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.5; }
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
     }
 
-    /* Banner de Produção */
+    /* ── BANNER PRODUÇÃO ── */
     .producao-banner {
       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      padding: 12px 16px;
+      padding: clamp(6px, 1.2vh, 16px) clamp(10px, 2vw, 24px);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      justify-content: space-around;
+      gap: 8px;
       flex-shrink: 0;
-      border-bottom: 3px solid rgba(255,255,255,0.15);
+      border-bottom: 2px solid rgba(255,255,255,0.15);
     }
 
-    .producao-bloco {
+    .prod-bloco {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: clamp(1px, 0.3vh, 4px);
     }
 
-    .producao-divider {
+    .prod-divider {
       width: 1px;
-      height: 40px;
+      height: clamp(28px, 5vh, 60px);
       background: rgba(255,255,255,0.2);
     }
 
-    .producao-label {
-      font-size: 0.75rem;
+    .prod-label {
+      font-size: clamp(0.55rem, 1.1vw, 1rem);
       font-weight: 600;
-      color: rgba(255,255,255,0.75);
+      color: rgba(255,255,255,0.7);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
     }
 
-    .producao-valor {
-      font-size: 2rem;
+    .prod-valor {
+      font-size: clamp(1.4rem, 3.5vw, 4rem);
       font-weight: 700;
-      color: #ffffff;
+      color: #fff;
       font-family: 'Courier New', monospace;
       line-height: 1;
     }
 
-    .producao-unidade {
-      font-size: 0.72rem;
-      color: rgba(255,255,255,0.6);
-      margin-top: 2px;
+    .prod-unidade {
+      font-size: clamp(0.55rem, 1vw, 0.9rem);
+      color: rgba(255,255,255,0.55);
     }
 
-    /* Content */
-    .content {
+    /* ── GRID DE CARDS ── */
+    .grid {
       flex: 1;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+      min-height: 0;
+      padding: clamp(6px, 1vw, 14px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto 1fr;
+      gap: clamp(6px, 1vw, 14px);
     }
 
-    /* Card Base */
+    .card-motor   { grid-column: 1; grid-row: 1; }
+    .card-dosador { grid-column: 2; grid-row: 1; }
+    .card-temp    { grid-column: 1 / -1; grid-row: 2; min-height: 0; flex: 1; }
+
+    /* ── CARD BASE ── */
     .card {
       background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: clamp(8px, 1vw, 16px);
+      padding: clamp(8px, 1.2vh, 18px) clamp(10px, 1.5vw, 20px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: clamp(6px, 1vh, 12px);
     }
 
     .card-title {
-      font-size: 1.1rem;
+      font-size: clamp(0.75rem, 1.5vw, 1.4rem);
       font-weight: 700;
       color: #222;
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin: 0;
+      gap: 6px;
     }
 
     .card-title::before {
       content: '';
-      width: 4px;
-      height: 24px;
+      width: clamp(3px, 0.3vw, 5px);
+      height: clamp(14px, 2vh, 28px);
       background-color: #2a5298;
       border-radius: 2px;
+      flex-shrink: 0;
     }
 
-    /* Info boxes */
+    /* ── INFO BOX ── */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: clamp(6px, 0.8vw, 12px);
     }
 
     .info-box {
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 12px;
-      border-radius: 8px;
+      padding: clamp(6px, 1.2vh, 16px) clamp(4px, 0.8vw, 12px);
+      border-radius: 7px;
       text-align: center;
     }
 
     .info-label {
-      font-size: 0.8rem;
+      font-size: clamp(0.6rem, 1.1vw, 1rem);
       color: #666;
       font-weight: 600;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     .info-value {
-      font-size: 1.6rem;
+      font-size: clamp(1.2rem, 3vw, 3.5rem);
       font-weight: 700;
       color: #2a5298;
       font-family: 'Courier New', monospace;
+      line-height: 1.1;
     }
 
     .info-unit {
-      font-size: 0.75rem;
+      font-size: clamp(0.55rem, 0.9vw, 0.85rem);
       color: #999;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
-    /* Status dosador */
     .status-ativo   { color: #28a745 !important; }
     .status-inativo { color: #999    !important; }
 
-    /* Zona temp label */
-    .zona-temp-label {
-      font-size: 0.85rem;
+    /* ── TEMPERATURAS ── */
+    .card-temp {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .temp-zonas {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: clamp(4px, 0.8vw, 12px);
+    }
+
+    .temp-zona {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 7px;
+      padding: clamp(6px, 1vh, 14px) clamp(4px, 0.5vw, 8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(3px, 0.6vh, 8px);
+    }
+
+    .tz-label {
+      font-size: clamp(0.6rem, 1.2vw, 1.1rem);
       font-weight: 700;
       color: #2a5298;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid #e0e7f0;
-      padding-bottom: 4px;
-      margin-top: 4px;
+      letter-spacing: 0.04em;
     }
 
-    /* Temp zona row */
-    .temp-zona-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .temp-box {
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 12px;
-      border-radius: 8px;
+    .tz-row {
+      width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      gap: clamp(3px, 0.5vh, 8px);
     }
 
-    .temp-label {
-      font-size: 0.8rem;
-      color: #666;
-      font-weight: 600;
-    }
-
-    .temp-display {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #2a5298;
-      font-family: 'Courier New', monospace;
-    }
-
-    .temp-unit {
-      font-size: 0.75rem;
-      color: #999;
+    .tz-item {
+      width: 100%;
       text-align: center;
     }
 
-    /* Botão de navegação */
-    .nav-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: white;
-      border-radius: 12px;
-      padding: 14px 16px;
-      text-decoration: none;
-      color: #2a5298;
-      font-size: 1rem;
-      font-weight: 700;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .tz-item-label {
+      font-size: clamp(0.55rem, 1vw, 0.95rem);
+      color: #888;
+      font-weight: 600;
     }
 
-    /* Responsividade */
-    @media (max-width: 480px) {
-      header h1     { font-size: 1.1rem; }
-      .card         { padding: 12px; gap: 10px; }
-      .card-title   { font-size: 1rem; }
-      .info-value   { font-size: 1.4rem; }
-      .temp-display { font-size: 1.6rem; }
+    .tz-item-value {
+      font-size: clamp(1.4rem, 3.5vw, 4rem);
+      font-weight: 700;
+      color: #2a5298;
+      font-family: 'Courier New', monospace;
+      line-height: 1;
+    }
+
+    .tz-item-value.setpoint {
+      color: #e07b00;
+    }
+
+    .tz-divider {
+      width: 70%;
+      height: 1px;
+      background: rgba(42,82,152,0.15);
+    }
+
+    .tz-unit {
+      font-size: clamp(0.55rem, 0.9vw, 0.85rem);
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="page">
 
     <!-- Header -->
     <header>
-      <h1>📊 Dashboard Extrusora</h1>
+      <h1>📊 Dashboard — Extrusora</h1>
       <div class="status-badge status-desconectado" id="status-badge">
         <span class="status-dot"></span>
         <span id="status-texto">DESCONECTADO</span>
@@ -292,30 +297,31 @@
 
     <!-- Banner Produção -->
     <div class="producao-banner">
-      <div class="producao-bloco">
-        <div class="producao-label">📦 Itens Fabricados</div>
-        <div class="producao-valor" id="db-itens">0</div>
-        <div class="producao-unidade">unidades</div>
+      <div class="prod-bloco">
+        <div class="prod-label">📦 Itens Fabricados</div>
+        <div class="prod-valor" id="db-itens">0</div>
+        <div class="prod-unidade">unidades</div>
       </div>
-      <div class="producao-divider"></div>
-      <div class="producao-bloco">
-        <div class="producao-label">📊 Média / Hora</div>
-        <div class="producao-valor" id="db-media">0</div>
-        <div class="producao-unidade">un/h</div>
+      <div class="prod-divider"></div>
+      <div class="prod-bloco">
+        <div class="prod-label">📊 Média / Hora</div>
+        <div class="prod-valor" id="db-media">0</div>
+        <div class="prod-unidade">un/h</div>
       </div>
-      <div class="producao-divider"></div>
-      <div class="producao-bloco">
-        <div class="producao-label">🕐 Atualizado</div>
-        <div class="producao-valor" style="font-size: 1rem; padding-top: 6px;" id="db-update">--:--:--</div>
-        <div class="producao-unidade">horário</div>
+      <div class="prod-divider"></div>
+      <div class="prod-bloco">
+        <div class="prod-label">🕐 Atualizado</div>
+        <div class="prod-valor" style="font-size: 0.95rem; padding-top: 4px;" id="db-update">--:--:--</div>
+        <div class="prod-unidade">horário</div>
       </div>
     </div>
 
-    <div class="content">
+    <!-- Grid de cards -->
+    <div class="grid">
 
       <!-- Motor -->
-      <div class="card">
-        <h2 class="card-title">Motor da Extrusora</h2>
+      <div class="card card-motor">
+        <div class="card-title">Motor da Extrusora</div>
         <div class="info-grid">
           <div class="info-box">
             <div class="info-label">Frequência</div>
@@ -330,84 +336,9 @@
         </div>
       </div>
 
-      <!-- Temperaturas -->
-      <div class="card">
-        <h2 class="card-title">Temperatura</h2>
-
-        <div class="zona-temp-label">Zona 1</div>
-        <div class="temp-zona-row">
-          <div class="temp-box">
-            <div class="temp-label">Temp. Atual</div>
-            <div class="temp-display" id="db-temp-1">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-          <div class="temp-box">
-            <div class="temp-label">Setpoint</div>
-            <div class="temp-display" id="db-sp-1">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-        </div>
-
-        <div class="zona-temp-label">Zona 2</div>
-        <div class="temp-zona-row">
-          <div class="temp-box">
-            <div class="temp-label">Temp. Atual</div>
-            <div class="temp-display" id="db-temp-2">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-          <div class="temp-box">
-            <div class="temp-label">Setpoint</div>
-            <div class="temp-display" id="db-sp-2">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-        </div>
-
-        <div class="zona-temp-label">Zona 3</div>
-        <div class="temp-zona-row">
-          <div class="temp-box">
-            <div class="temp-label">Temp. Atual</div>
-            <div class="temp-display" id="db-temp-3">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-          <div class="temp-box">
-            <div class="temp-label">Setpoint</div>
-            <div class="temp-display" id="db-sp-3">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-        </div>
-
-        <div class="zona-temp-label">Zona 4</div>
-        <div class="temp-zona-row">
-          <div class="temp-box">
-            <div class="temp-label">Temp. Atual</div>
-            <div class="temp-display" id="db-temp-4">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-          <div class="temp-box">
-            <div class="temp-label">Setpoint</div>
-            <div class="temp-display" id="db-sp-4">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-        </div>
-
-        <div class="zona-temp-label">Zona 5</div>
-        <div class="temp-zona-row">
-          <div class="temp-box">
-            <div class="temp-label">Temp. Atual</div>
-            <div class="temp-display" id="db-temp-5">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-          <div class="temp-box">
-            <div class="temp-label">Setpoint</div>
-            <div class="temp-display" id="db-sp-5">--</div>
-            <div class="temp-unit">°C</div>
-          </div>
-        </div>
-      </div>
-
       <!-- Dosador -->
-      <div class="card">
-        <h2 class="card-title">Dosador de Material</h2>
+      <div class="card card-dosador">
+        <div class="card-title">Dosador</div>
         <div class="info-grid">
           <div class="info-box">
             <div class="info-label">Frequência</div>
@@ -416,8 +347,101 @@
           </div>
           <div class="info-box">
             <div class="info-label">Status</div>
-            <div class="info-value status-inativo" id="db-dosador-status" style="font-size: 1rem;">INATIVO</div>
+            <div class="info-value status-inativo" id="db-dosador-status" style="font-size: 0.9rem; padding-top: 4px;">INATIVO</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Temperaturas -->
+      <div class="card card-temp">
+        <div class="card-title">Temperatura — Zonas de Aquecimento</div>
+        <div class="temp-zonas">
+
+          <div class="temp-zona">
+            <div class="tz-label">Zona 1</div>
+            <div class="tz-row">
+              <div class="tz-item">
+                <div class="tz-item-label">Atual</div>
+                <div class="tz-item-value" id="db-temp-1">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+              <div class="tz-divider"></div>
+              <div class="tz-item">
+                <div class="tz-item-label">Setpoint</div>
+                <div class="tz-item-value setpoint" id="db-sp-1">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="temp-zona">
+            <div class="tz-label">Zona 2</div>
+            <div class="tz-row">
+              <div class="tz-item">
+                <div class="tz-item-label">Atual</div>
+                <div class="tz-item-value" id="db-temp-2">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+              <div class="tz-divider"></div>
+              <div class="tz-item">
+                <div class="tz-item-label">Setpoint</div>
+                <div class="tz-item-value setpoint" id="db-sp-2">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="temp-zona">
+            <div class="tz-label">Zona 3</div>
+            <div class="tz-row">
+              <div class="tz-item">
+                <div class="tz-item-label">Atual</div>
+                <div class="tz-item-value" id="db-temp-3">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+              <div class="tz-divider"></div>
+              <div class="tz-item">
+                <div class="tz-item-label">Setpoint</div>
+                <div class="tz-item-value setpoint" id="db-sp-3">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="temp-zona">
+            <div class="tz-label">Zona 4</div>
+            <div class="tz-row">
+              <div class="tz-item">
+                <div class="tz-item-label">Atual</div>
+                <div class="tz-item-value" id="db-temp-4">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+              <div class="tz-divider"></div>
+              <div class="tz-item">
+                <div class="tz-item-label">Setpoint</div>
+                <div class="tz-item-value setpoint" id="db-sp-4">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="temp-zona">
+            <div class="tz-label">Zona 5</div>
+            <div class="tz-row">
+              <div class="tz-item">
+                <div class="tz-item-label">Atual</div>
+                <div class="tz-item-value" id="db-temp-5">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+              <div class="tz-divider"></div>
+              <div class="tz-item">
+                <div class="tz-item-label">Setpoint</div>
+                <div class="tz-item-value setpoint" id="db-sp-5">--</div>
+                <div class="tz-unit">°C</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -467,10 +491,10 @@
             this.handleMessage(topic, message.toString());
           });
 
-          this.mqttClient.on("error",    (err) => { console.error("[MQTT]", err); this.updateStatus(false); });
-          this.mqttClient.on("offline",  ()    => { this.updateStatus(false); });
-          this.mqttClient.on("close",    ()    => { this.updateStatus(false); });
-          this.mqttClient.on("reconnect",()    => { console.log("[MQTT] Reconectando..."); });
+          this.mqttClient.on("error",     (err) => { console.error("[MQTT]", err); this.updateStatus(false); });
+          this.mqttClient.on("offline",   ()    => { this.updateStatus(false); });
+          this.mqttClient.on("close",     ()    => { this.updateStatus(false); });
+          this.mqttClient.on("reconnect", ()    => { console.log("[MQTT] Reconectando..."); });
 
         } catch (e) {
           console.error("[MQTT] Exceção:", e);
