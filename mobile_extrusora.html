@@ -550,10 +550,10 @@
           <label class="dropdown-label">Selecione o tipo de material:</label>
           <select id="material-select">
             <option value="">-- Selecione --</option>
-            <option value="PP">PP</option>
-            <option value="PA">PA</option>
-            <option value="ABS">ABS</option>
-            <option value="PEAD">PEAD</option>
+            <option value="pp">Polipropileno (PP)</option>
+            <option value="pa">Poliamida (PA)</option>
+            <option value="abs">Acrilonitrila Butadieno Estireno (ABS)</option>
+            <option value="pead">Polietileno de Alta Densidade (PEAD)</option>
           </select>
         </div>
       </div>
@@ -579,14 +579,14 @@
         sliderCorrente.addEventListener('input', (e) => {
           const value = e.target.value;
           document.getElementById('corrente-setpoint').textContent = value + ' Hz';
-          this.sendMQTTCommand('2ngbxgbk/extrusora/motor/corrente/setpoint', value);
+          this.sendMQTTCommand('extrusora/motor/corrente/setpoint', value);
         });
 
         // Setpoints de temperatura - 5 zonas
         for (let z = 1; z <= 5; z++) {
           const tempSetpoint = document.getElementById(`temp-setpoint-${z}`);
           tempSetpoint.addEventListener('change', (e) => {
-            this.sendMQTTCommand(`2ngbxgbk/extrusora/temperatura/zona${z}/setpoint`, e.target.value);
+            this.sendMQTTCommand(`extrusora/temperatura/zona${z}/setpoint`, e.target.value);
           });
         }
 
@@ -595,7 +595,7 @@
         materialSelect.addEventListener('change', (e) => {
           const value = e.target.value;
           if (value) {
-            this.sendMQTTCommand('2ngbxgbk/extrusora/material/tipo', value);
+            this.sendMQTTCommand('extrusora/material/tipo', value);
           }
         });
       }
@@ -621,14 +621,14 @@
             this.updateConnectionStatus(true);
 
             // Subscrever aos tópicos
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/producao/itens", { qos: 1 });
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/motor/frequencia", { qos: 1 });
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/motor/corrente", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/producao/itens", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/motor/frequencia", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/motor/corrente", { qos: 1 });
             for (let z = 1; z <= 5; z++) {
-              this.mqttClient.subscribe(`2ngbxgbk/extrusora/temperatura/zona${z}/atual`, { qos: 1 });
+              this.mqttClient.subscribe(`extrusora/temperatura/zona${z}/atual`, { qos: 1 });
             }
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/frequencia", { qos: 1 });
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/status", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/dosador/frequencia", { qos: 1 });
+            this.mqttClient.subscribe("extrusora/dosador/status", { qos: 1 });
           });
 
           this.mqttClient.on("message", (topic, message) => {
@@ -669,23 +669,23 @@
         try {
           const value = parseFloat(message);
 
-          if (topic === "2ngbxgbk/extrusora/producao/itens") {
+          if (topic === "extrusora/producao/itens") {
             const itens = parseInt(message) || 0;
             document.getElementById("itens-fabricados").textContent = itens.toLocaleString('pt-BR');
             const agora = new Date();
             document.getElementById("itens-timestamp").textContent =
               agora.toLocaleTimeString('pt-BR');
-          } else if (topic === "2ngbxgbk/extrusora/motor/frequencia") {
+          } else if (topic === "extrusora/motor/frequencia") {
             document.getElementById("motor-freq").textContent = value.toFixed(1).padStart(5, '0');
-          } else if (topic === "2ngbxgbk/extrusora/motor/corrente") {
+          } else if (topic === "extrusora/motor/corrente") {
             document.getElementById("motor-corrente").textContent = value.toFixed(1);
-          } else if (topic.startsWith("2ngbxgbk/extrusora/temperatura/zona") && topic.endsWith("/atual")) {
+          } else if (topic.startsWith("extrusora/temperatura/zona") && topic.endsWith("/atual")) {
             const zona = topic.split("/")[2].replace("zona", "");
             const el = document.getElementById(`temp-atual-${zona}`);
             if (el) el.textContent = Math.round(value);
-          } else if (topic === "2ngbxgbk/extrusora/dosador/frequencia") {
+          } else if (topic === "extrusora/dosador/frequencia") {
             document.getElementById("dosador-freq").textContent = value.toFixed(1).padStart(5, '0');
-          } else if (topic === "2ngbxgbk/extrusora/dosador/status") {
+          } else if (topic === "extrusora/dosador/status") {
             const status = message === "true" ? "ATIVO" : "INATIVO";
             const statusElement = document.getElementById("dosador-status");
             statusElement.textContent = status;
