@@ -443,7 +443,7 @@
             <span>Ajuste de Frequencia</span>
             <span class="slider-value" id="corrente-setpoint">0.0 Hz</span>
           </div>
-          <input type="range" id="slider-corrente" min="20" max="60" step="0.1" value="0" />
+          <input type="range" id="slider-corrente" min="20" max="60" step="1" value="0" />
         </div>
       </div>
 
@@ -574,12 +574,16 @@
       }
 
       setupEventListeners() {
-        // Slider de corrente
+        // Slider de frequência - atualiza display ao mover, envia só ao soltar
         const sliderCorrente = document.getElementById('slider-corrente');
         sliderCorrente.addEventListener('input', (e) => {
-          const value = e.target.value;
-          document.getElementById('corrente-setpoint').textContent = value + ' Hz';
-          this.sendMQTTCommand('2ngbxgbk/extrusora/motor/corrente/setpoint', value);
+          document.getElementById('corrente-setpoint').textContent = parseFloat(e.target.value).toFixed(1) + ' Hz';
+        });
+        sliderCorrente.addEventListener('mouseup', (e) => {
+          this.sendMQTTCommand('2ngbxgbk/extrusora/motor/frequencia/setpoint', e.target.value);
+        });
+        sliderCorrente.addEventListener('touchend', (e) => {
+          this.sendMQTTCommand('2ngbxgbk/extrusora/motor/frequencia/setpoint', e.target.value);
         });
 
         // Setpoints de temperatura - 5 zonas
@@ -625,7 +629,7 @@
             this.mqttClient.subscribe("2ngbxgbk/extrusora/motor/frequencia", { qos: 1 });
             this.mqttClient.subscribe("2ngbxgbk/extrusora/motor/corrente", { qos: 1 });
             for (let z = 1; z <= 5; z++) {
-              this.mqttClient.subscribe(`extrusora/temperatura/zona${z}/atual`, { qos: 1 });
+              this.mqttClient.subscribe(`2ngbxgbk/extrusora/temperatura/zona${z}/atual`, { qos: 1 });
             }
             this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/frequencia", { qos: 1 });
             this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/status", { qos: 1 });
@@ -679,8 +683,8 @@
             document.getElementById("motor-freq").textContent = value.toFixed(1).padStart(5, '0');
           } else if (topic === "2ngbxgbk/extrusora/motor/corrente") {
             document.getElementById("motor-corrente").textContent = value.toFixed(1);
-          } else if (topic.startsWith("extrusora/temperatura/zona") && topic.endsWith("/atual")) {
-            const zona = topic.split("/")[2].replace("zona", "");
+          } else if (topic.startsWith("2ngbxgbk/extrusora/temperatura/zona") && topic.endsWith("/atual")) {
+            const zona = topic.split("/")[3].replace("zona", "");
             const el = document.getElementById(`temp-atual-${zona}`);
             if (el) el.textContent = Math.round(value);
           } else if (topic === "2ngbxgbk/extrusora/dosador/frequencia") {
