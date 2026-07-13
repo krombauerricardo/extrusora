@@ -728,6 +728,30 @@
 
         this.sendMQTTCommand('2ngbxgbk/extrusora/dosador1/frequencia/set', hzDosador1.toFixed(2));
         this.sendMQTTCommand('2ngbxgbk/extrusora/dosador2/frequencia/set', hzDosador2.toFixed(2));
+
+        // Snapshot completo (retido) para restaurar a tela em caso de reload/reconexão/outro dispositivo
+        const estado = {
+          pctPP: pctPP,
+          tempo: tempo,
+          kgH: kgH,
+          mixKg: mixKg,
+          ppKg: ppKg,
+          hz1: hzDosador1,
+          hz2: hzDosador2
+        };
+        this.sendMQTTCommand('2ngbxgbk/extrusora/dosador/calculo/estado', JSON.stringify(estado));
+      }
+
+      restaurarEstadoCalculo(estado) {
+        const resultadoEl = document.getElementById('calc-resultado');
+        document.getElementById('calc-pp').value = estado.pctPP;
+        document.getElementById('calc-tempo').value = estado.tempo;
+        resultadoEl.classList.add('visivel');
+        resultadoEl.innerHTML = `Produção: ${estado.kgH.toFixed(1)} kg/h<br>
+          Material MIX: ${estado.mixKg.toFixed(1)} kg/h<br>
+          Material PP: ${estado.ppKg.toFixed(1)} kg/h<br><br>
+          <b>Dosador 1 (MIX):</b> ${estado.hz1.toFixed(2)} Hz<br>
+          <b>Dosador 2 (PP):</b> ${estado.hz2.toFixed(2)} Hz`;
       }
 
       connectMQTT() {
@@ -757,6 +781,11 @@
             for (let z = 1; z <= 5; z++) {
               this.mqttClient.subscribe(`2ngbxgbk/extrusora/temperatura/zona${z}/atual`, { qos: 1 });
             }
+
+            // Tópicos da calculadora/dosadores - para restaurar o último estado conhecido
+            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador1/comando", { qos: 1 });
+            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador2/comando", { qos: 1 });
+            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/calculo/estado", { qos: 1 });
           });
 
           this.mqttClient.on("message", (topic, message) => {
@@ -811,6 +840,15 @@
             const zona = topic.split("/")[3].replace("zona", "");
             const el = document.getElementById(`temp-atual-${zona}`);
             if (el) el.textContent = Math.round(value);
+          } else if (topic === "2ngbxgbk/extrusora/dosador1/comando") {
+            this.dosador1Ligado = (message === "true");
+            this.atualizarBotaoDosador(document.getElementById('btn-dosador1'), this.dosador1Ligado);
+          } else if (topic === "2ngbxgbk/extrusora/dosador2/comando") {
+            this.dosador2Ligado = (message === "true");
+            this.atualizarBotaoDosador(document.getElementById('btn-dosador2'), this.dosador2Ligado);
+          } else if (topic === "2ngbxgbk/extrusora/dosador/calculo/estado") {
+            const estado = JSON.parse(message);
+            this.restaurarEstadoCalculo(estado);
           }
         } catch (error) {
           console.error("Erro ao processar mensagem MQTT:", error);
