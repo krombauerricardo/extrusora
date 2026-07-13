@@ -275,7 +275,7 @@
       background-color: #f9f9f9;
     }
 
-    /* Dropdown */
+    /* Dropdown (mantido, não é mais usado mas não atrapalha) */
     .dropdown-container {
       display: flex;
       flex-direction: column;
@@ -363,11 +363,80 @@
       background: rgba(255,255,255,0.2);
     }
 
-    /* Dosador Card */
-    .dosador-info {
+    /* Calculadora de Mistura / Dosadores */
+    .dosador-toggle-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+    }
+
+    .dosador-toggle-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-toggle {
+      width: 100%;
+      padding: 14px 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-toggle.desligado {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .btn-toggle.ligado {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .calc-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .calc-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-calcular {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: #2a5298;
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .calc-resultado {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #222;
+      line-height: 1.8;
+      display: none;
+    }
+
+    .calc-resultado.visivel {
+      display: block;
     }
 
     /* Responsividade */
@@ -527,37 +596,35 @@
         </div>
       </div>
 
-      <!-- Dosador de Material -->
+      <!-- Calculadora de Mistura (substitui Dosador de Material / Material) -->
       <div class="card">
-        <h2 class="card-title">Dosador de Material</h2>
-        <div class="dosador-info">
-          <div class="info-box">
-            <div class="info-label">Frequência</div>
-            <div class="info-value" id="dosador-freq">00.0</div>
-            <div class="info-unit">Hz</div>
-          </div>
-          <div class="info-box">
-            <div class="info-label">Status</div>
-            <div class="info-value" id="dosador-status" style="font-size: 1rem; color: #999;">INATIVO</div>
-          </div>
-        </div>
-      </div>
+        <h2 class="card-title">Calculadora de Mistura</h2>
 
-      <!-- Seleção de Material -->
-      <div class="card">
-        <h2 class="card-title">Material</h2>
-        <div class="dropdown-container">
-          <label class="dropdown-label">Selecione o tipo de material:</label>
-          <select id="material-select">
-            <option value="">-- Selecione --</option>
-            <option value="PP">PP</option>
-            <option value="PA">PA</option>
-            <option value="ABS">ABS</option>
-            <option value="PEAD">PEAD</option>
-            <option value="MIX">MIX</option>
-            <option value="NORYL">NORYL</option>
-          </select>
+        <div class="dosador-toggle-row">
+          <div class="dosador-toggle-box">
+            <div class="dropdown-label">Dosador 1 (MIX)</div>
+            <button type="button" class="btn-toggle desligado" id="btn-dosador1">DESLIGADO</button>
+          </div>
+          <div class="dosador-toggle-box">
+            <div class="dropdown-label">Dosador 2 (PP)</div>
+            <button type="button" class="btn-toggle desligado" id="btn-dosador2">DESLIGADO</button>
+          </div>
         </div>
+
+        <div class="calc-inputs">
+          <div class="calc-field">
+            <label class="dropdown-label">% Material PP</label>
+            <input type="number" id="calc-pp" class="temp-input" min="0" max="100" step="0.1" value="0" />
+          </div>
+          <div class="calc-field">
+            <label class="dropdown-label">Tempo p/ poste (min)</label>
+            <input type="number" id="calc-tempo" class="temp-input" min="0" step="0.01" value="0" />
+          </div>
+        </div>
+
+        <button type="button" class="btn-calcular" id="btn-calcular">Calcular e Enviar</button>
+
+        <div class="calc-resultado" id="calc-resultado"></div>
       </div>
     </div>
   </div>
@@ -567,6 +634,8 @@
       constructor() {
         this.mqttClient = null;
         this.isConnected = false;
+        this.dosador1Ligado = false;
+        this.dosador2Ligado = false;
         this.init();
       }
 
@@ -596,14 +665,69 @@
           });
         }
 
-        // Seleção de material
-        const materialSelect = document.getElementById('material-select');
-        materialSelect.addEventListener('change', (e) => {
-          const value = e.target.value;
-          if (value) {
-            this.sendMQTTCommand('2ngbxgbk/extrusora/material/tipo', value);
-          }
+        // Botão liga/desliga Dosador 1 (MIX)
+        const btnDosador1 = document.getElementById('btn-dosador1');
+        btnDosador1.addEventListener('click', () => {
+          this.dosador1Ligado = !this.dosador1Ligado;
+          this.atualizarBotaoDosador(btnDosador1, this.dosador1Ligado);
+          this.sendMQTTCommand('extrusora/dosador1/comando', this.dosador1Ligado ? 'true' : 'false');
         });
+
+        // Botão liga/desliga Dosador 2 (PP)
+        const btnDosador2 = document.getElementById('btn-dosador2');
+        btnDosador2.addEventListener('click', () => {
+          this.dosador2Ligado = !this.dosador2Ligado;
+          this.atualizarBotaoDosador(btnDosador2, this.dosador2Ligado);
+          this.sendMQTTCommand('extrusora/dosador2/comando', this.dosador2Ligado ? 'true' : 'false');
+        });
+
+        // Botão Calcular e Enviar (calculadora de mistura)
+        const btnCalcular = document.getElementById('btn-calcular');
+        btnCalcular.addEventListener('click', () => {
+          this.calcularMistura();
+        });
+      }
+
+      atualizarBotaoDosador(botao, ligado) {
+        if (ligado) {
+          botao.classList.remove('desligado');
+          botao.classList.add('ligado');
+          botao.textContent = 'LIGADO';
+        } else {
+          botao.classList.remove('ligado');
+          botao.classList.add('desligado');
+          botao.textContent = 'DESLIGADO';
+        }
+      }
+
+      calcularMistura() {
+        const tempo = parseFloat(document.getElementById('calc-tempo').value);
+        const pctPP = parseFloat(document.getElementById('calc-pp').value);
+        const resultadoEl = document.getElementById('calc-resultado');
+
+        if (!(tempo > 0) || !(pctPP >= 0)) {
+          resultadoEl.classList.add('visivel');
+          resultadoEl.innerHTML = 'Informe valores válidos de tempo e percentual.';
+          return;
+        }
+
+        const kgPoste = 26;
+        const kgH = (kgPoste * 60) / tempo;
+        const ppKg = kgH * (pctPP / 100);
+        const mixKg = kgH - ppKg;
+
+        const hzDosador1 = mixKg / 19.2; // Dosador 1 - MIX
+        const hzDosador2 = ppKg / 57;    // Dosador 2 - PP
+
+        resultadoEl.classList.add('visivel');
+        resultadoEl.innerHTML = `Produção: ${kgH.toFixed(1)} kg/h<br>
+          Material MIX: ${mixKg.toFixed(1)} kg/h<br>
+          Material PP: ${ppKg.toFixed(1)} kg/h<br><br>
+          <b>Dosador 1 (MIX):</b> ${hzDosador1.toFixed(2)} Hz<br>
+          <b>Dosador 2 (PP):</b> ${hzDosador2.toFixed(2)} Hz`;
+
+        this.sendMQTTCommand('extrusora/dosador1/frequencia/set', hzDosador1.toFixed(2));
+        this.sendMQTTCommand('extrusora/dosador2/frequencia/set', hzDosador2.toFixed(2));
       }
 
       connectMQTT() {
@@ -633,8 +757,6 @@
             for (let z = 1; z <= 5; z++) {
               this.mqttClient.subscribe(`2ngbxgbk/extrusora/temperatura/zona${z}/atual`, { qos: 1 });
             }
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/frequencia", { qos: 1 });
-            this.mqttClient.subscribe("2ngbxgbk/extrusora/dosador/status", { qos: 1 });
           });
 
           this.mqttClient.on("message", (topic, message) => {
@@ -689,13 +811,6 @@
             const zona = topic.split("/")[3].replace("zona", "");
             const el = document.getElementById(`temp-atual-${zona}`);
             if (el) el.textContent = Math.round(value);
-          } else if (topic === "2ngbxgbk/extrusora/dosador/frequencia") {
-            document.getElementById("dosador-freq").textContent = value.toFixed(1).padStart(5, '0');
-          } else if (topic === "2ngbxgbk/extrusora/dosador/status") {
-            const status = message === "true" ? "ATIVO" : "INATIVO";
-            const statusElement = document.getElementById("dosador-status");
-            statusElement.textContent = status;
-            statusElement.style.color = message === "true" ? "#28a745" : "#999";
           }
         } catch (error) {
           console.error("Erro ao processar mensagem MQTT:", error);
